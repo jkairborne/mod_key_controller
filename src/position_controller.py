@@ -138,7 +138,7 @@ class PositionController(object):
 
 		if (self.x_des==-9999999) and self.y_des==-9999999 and self.z_des==9999999:
 			self.quadrotor_command = self.pbvs_data
-			print("PBVS control: %.2f %.2f %.2f %.2f" % (self.quadrotor_command.linear.x,self.quadrotor_command.linear.y,self.quadrotor_command.linear.z,self.quadrotor_command.angular.z))
+			#print("PBVS control: %.2f %.2f %.2f %.2f" % (self.quadrotor_command.linear.x,self.quadrotor_command.linear.y,self.quadrotor_command.linear.z,self.quadrotor_command.angular.z))
 			self.pub_des_vel.publish(self.quadrotor_command)
 		else:
 			# Publish command velocity to quadrotor
@@ -146,7 +146,7 @@ class PositionController(object):
 			self.quadrotor_command.linear.y = -roll
 			self.quadrotor_command.angular.z = -yaw_rate
 			self.quadrotor_command.linear.z = -z_vel
-			print("opti control: %.2f %.2f %.2f %.2f" % (self.quadrotor_command.linear.x,self.quadrotor_command.linear.y,self.quadrotor_command.linear.z,self.quadrotor_command.angular.z))
+			#print("opti control: %.2f %.2f %.2f %.2f" % (self.quadrotor_command.linear.x,self.quadrotor_command.linear.y,self.quadrotor_command.linear.z,self.quadrotor_command.angular.z))
 			self.pub_des_vel.publish(self.quadrotor_command)
 		#rospy.loginfo("x : %f    y : %f     z : %f      angular: %f   ", roll, pitch, z_vel, yaw_rate)
 

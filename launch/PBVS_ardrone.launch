@@ -6,13 +6,17 @@
 
 
   <include file="$(find opencv_ardrone)/launch/ardrone.launch"/>
+  <include file="$(find vrpn_client_ros)/launch/sample.launch"/>
 
 <!-- Launch the ardronev1 node - our OptiTrack control -->
-  <node name="pos_controller" pkg="JoshArdrone" type="position_controller.py" output = "screen"/>
+  <node name="pos_controller" pkg="mod_key_controller" type="position_controller.py" output = "screen"/>
 
-  <node name="desired_values" pkg="JoshArdrone" type="desired_positions.py" required="true"/>
+  <node name="desired_values" pkg="mod_key_controller" type="desired_positions.py" required="true"/>
 
-  <node name="drone_controller" pkg="JoshArdrone" type="drone_controller.py" output = "screen"/>
+  <node name="drone_controller" pkg="mod_key_controller" type="drone_controller.py" output = "screen"/>
 
-  <node name="key_controller" pkg="JoshArdrone" type="keyboard_controller.py" output = "screen"/>
+  <node name="key_controller" pkg="mod_key_controller" type="keyboard_controller.py" output = "screen"/>
+
+  <node name="PBVS_Control" pkg="ardronecontrol" type="PBVS_ardrone" output = "screen"/>
+  <node name="reconfigure_gui" pkg="rqt_reconfigure" type="rqt_reconfigure"/>
 </launch>

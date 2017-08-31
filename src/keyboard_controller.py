@@ -50,7 +50,7 @@ class KeyboardController(DroneVideoDisplay):
 		self.z_velocity = 0
 		self.moving = False # quadrotor state
 
-		self.pub_path = rospy.Publisher('path', Int32, queue_size=300)  # publish desired path index of integer type
+		self.pub_path = rospy.Publisher('path', Int32, queue_size=2)  # publish desired path index of integer type
 		self.path_param = Int32() # Container for desired path index of integer type
 
 # We add a keyboard handler to the DroneVideoDisplay to react to keypresses
