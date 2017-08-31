@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+
+<launch>
+<!-- Launch the OptiTrack node - the OptiTrack must already be running -->
+
+
+  <include file="$(find opencv_ardrone)/launch/ardrone.launch"/>
+
+<!-- Launch the ardronev1 node - our OptiTrack control -->
+  <node name="pos_controller" pkg="JoshArdrone" type="position_controller.py" output = "screen"/>
+
+  <node name="desired_values" pkg="JoshArdrone" type="desired_positions.py" required="true"/>
+
+  <node name="drone_controller" pkg="JoshArdrone" type="drone_controller.py" output = "screen"/>
+
+  <node name="key_controller" pkg="JoshArdrone" type="keyboard_controller.py" output = "screen"/>
+</launch>
