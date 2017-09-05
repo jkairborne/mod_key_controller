@@ -42,7 +42,7 @@ class ROSDesiredPositionGenerator(object):
     	# Container for desired path index
         self.command_path = Int32()
         self.z_pixel = Int32() # receives hula hoop center height in image frame
-        self.Z = 1.25 # start height
+        self.Z = 1.75 # start height
         self.flag = 0 # height correction flag
 
     def comm_path(self, path_msg): # subscriber to obtain desired path index
@@ -99,7 +99,7 @@ class ROSDesiredPositionGenerator(object):
         
 
         # Desired orientation   
-        yaw = 0# 3*pi/4 # zero yaw (comment this for non-zero yaw)
+        yaw = 0 # 3*pi/2 #0# zero yaw (comment this for non-zero yaw)
     	(self.quadrotor_pose.pose.orientation.x,self.quadrotor_pose.pose.orientation.y,self.quadrotor_pose.pose.orientation.z,self.quadrotor_pose.pose.orientation.w) = quaternion_from_euler(0, 0, yaw) # desired roll, pitch, yaw converted to quaternion
 
         # Publish pose and velocity containers

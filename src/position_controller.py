@@ -140,7 +140,7 @@ class PositionController(object):
 		pitch = asin(min(1,max((x_accel_comm/(f*cos(roll))),-1))) #pitch angle
 		z_vel = (self.z_des - self.z)/self.tau_z # z velocity
 		yaw_rate = (self.psi_des - self.psi)/self.tau_omega # yaw rate
-		print("Modified: %.2f %.2f\n" % (pitch,-roll))
+		#print("Modified: %.2f %.2f\n" % (pitch,-roll))
 
 		if (self.x_des==-9999999) and self.y_des==-9999999 and self.z_des==9999999:
 			self.quadrotor_command = self.pbvs_data
@@ -150,7 +150,7 @@ class PositionController(object):
 			# Publish command velocity to quadrotor
 			self.quadrotor_command.linear.x = pitch
 			self.quadrotor_command.linear.y = -roll
-			self.quadrotor_command.angular.z = 0#-yaw_rate
+			self.quadrotor_command.angular.z = -yaw_rate
 			self.quadrotor_command.linear.z = -z_vel
 			#print("opti control: %.2f %.2f %.2f %.2f" % (self.quadrotor_command.linear.x,self.quadrotor_command.linear.y,self.quadrotor_command.linear.z,self.quadrotor_command.angular.z))
 			self.pub_des_vel.publish(self.quadrotor_command)
@@ -162,7 +162,7 @@ class PositionController(object):
 #		print("Delta xdot,ydot,z,psi: %.2f \t %.2f \t %.2f \t %.2f" % ((self.x_vel_des-self.x_vel),(self.y_vel_des-self.y_vel),(self.z_des - self.z),(self.psi_des - self.psi)))
 #		print("Delta x,y: %.2f \t %.2f" % ((self.x_des-self.x),(self.y_des-self.y)))
 #		print("commanded x : %.2f    y : %.2f     z : %.2f      angular: %.2f   "%(self.quadrotor_command.linear.x, self.quadrotor_command.linear.y, self.quadrotor_command.linear.z, self.quadrotor_command.angular.z))
-		print("roll: %.2f, pitch:  %.2f, yaw:  %.2f" %(self.phi,self.theta,self.psi) )
+		#print("roll: %.2f, pitch:  %.2f, yaw:  %.2f" %(self.phi,self.theta,self.psi) )
 
 		# Publish vicon data as PoseStamped geometry msg
 		self.pub_opti_data.publish(self.opti_pose)
