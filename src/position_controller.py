@@ -33,6 +33,7 @@ class PositionController(object):
 		self.quadrotor_command = Twist() # container to publish command velocity to quadrotor
 
 		self.pbvs_data = Twist()
+		self.ibvs_data = Twist()
 
 		# Pblishers and subscribers
 		self.sub_opti_data = rospy.Subscriber('/vrpn_client_node/{0}/pose'.format(self.model_name),PoseStamped, self.update_opti_data) # subscribe to incoming vicon data
@@ -42,6 +43,7 @@ class PositionController(object):
 		self.sub_des_vel = rospy.Subscriber('des_vel',TwistStamped,self.des_velo) # subscribe to desired velocity
 
 		self.sub_PBVS_vel = rospy.Subscriber('cmd_vel_PBVS',Twist,self.update_PBVS_data) # receive PBVS desired velocity commands to quadrotor
+		self.sub_IBVS_vel = rospy.Subscriber('cmd_vel_IBVS',Twist,self.update_IBVS_data) # receive PBVS desired velocity commands to quadrotor
 
 		# Constants
 		self.g = 9.81 # gravity constant
@@ -85,7 +87,10 @@ class PositionController(object):
 
 	def update_PBVS_data(self, actual_pbvs_data): # subscriber to obtain vicon data
 		self.pbvs_data = actual_pbvs_data
-		#rospy.loginfo("x : %f    y : %f     z : %f      angular: %f   ", roll, pitch, z_vel, yaw_rate)		
+		#rospy.loginfo("x : %f    y : %f     z : %f      angular: %f   ", roll, pitch, z_vel, yaw_rate)
+		
+	def update_IBVS_data(self, actual_ibvs_data):
+		self.ibvs_data = actual_ibvs_data		
 
 	def desired(self):
 		# Time
@@ -144,8 +149,17 @@ class PositionController(object):
 
 		if (self.x_des==-9999999) and self.y_des==-9999999 and self.z_des==9999999:
 			self.quadrotor_command = self.pbvs_data
+			print("PBVS control")
 			#print("PBVS control: %.2f %.2f %.2f %.2f" % (self.quadrotor_command.linear.x,self.quadrotor_command.linear.y,self.quadrotor_command.linear.z,self.quadrotor_command.angular.z))
-			self.pub_des_vel.publish(self.quadrotor_command)
+		elif (self.x_des==-9999998) and self.y_des==-9999998 and self.z_des==9999998:
+			self.quadrotor_command = self.ibvs_data
+			print("IBVS control")
+		elif (self.x_des==-9999997) and self.y_des==-9999997 and self.z_des==9999997:
+			self.quadrotor_command.linear.x = pitch #command from optitrack
+			self.quadrotor_command.linear.y = -roll #command from optitrack
+			self.quadrotor_command.linear.z = self.ibvs_data.linear.z
+			self.quadrotor_command.angular.z = self.ibvs_data.angular.z
+			print("ZP_IBVS control")
 		else:
 			# Publish command velocity to quadrotor
 			self.quadrotor_command.linear.x = pitch
@@ -153,7 +167,7 @@ class PositionController(object):
 			self.quadrotor_command.angular.z = -yaw_rate
 			self.quadrotor_command.linear.z = -z_vel
 			#print("opti control: %.2f %.2f %.2f %.2f" % (self.quadrotor_command.linear.x,self.quadrotor_command.linear.y,self.quadrotor_command.linear.z,self.quadrotor_command.angular.z))
-			self.pub_des_vel.publish(self.quadrotor_command)
+		self.pub_des_vel.publish(self.quadrotor_command)
 		#rospy.loginfo("x : %f    y : %f     z : %f      angular: %f   ", roll, pitch, z_vel, yaw_rate)
 
 #		print("\nx,y,z: %.2f \t %.2f \t %.2f" %(self.x,self.y,self.z))

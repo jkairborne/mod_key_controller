@@ -37,7 +37,9 @@ class KeyMapping(object):
 	Emergency        = QtCore.Qt.Key.Key_Space
 	ThrottleCut      = QtCore.Qt.Key.Key_K # kill switch
 	OptiControl      = QtCore.Qt.Key.Key_M # Use Optitrack control
-	PBVSControl      = QtCore.Qt.Key.Key_V # Use Visual control
+	PBVSControl      = QtCore.Qt.Key.Key_P # Use PBVS control
+	IBVSControl      = QtCore.Qt.Key.Key_I # IBVS control
+	ZP_IBVSControl   = QtCore.Qt.Key.Key_O # Z and Psi IBVS
 
 # Our controller definition, note that we extend the DroneVideoDisplay class
 class KeyboardController(DroneVideoDisplay):
@@ -101,6 +103,14 @@ class KeyboardController(DroneVideoDisplay):
 					self.pub_path.publish(self.path_param) # publish desired path index
 					self.moving = True
 					print("In the PBVS control")
+				elif key == KeyMapping.IBVSControl:
+					self.path_param = 2 #update Wpt
+					self.pub_path.publish(self.path_param)
+					self.moving = True
+				elif key == KeyMapping.ZP_IBVSControl:
+					self.path_param = 3
+					self.pub_path.publish(self.path_param)
+					self.moving = True
 
 
 			if self.moving == False:	
