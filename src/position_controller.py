@@ -25,6 +25,8 @@ class PositionController(object):
 	def __init__(self):
 		self.model_name = 'ardrone'
 
+		self.stval = 0.25
+
 		# Containers
 		self.opti_data = PoseStamped() # container to store incoming vicon data
 		self.des_position = PoseStamped() # container to store incoming desired pose
@@ -49,8 +51,8 @@ class PositionController(object):
 		self.g = 9.81 # gravity constant
 
 		# Tuning parameters
-		self.zeta_x = 0.85 # 0.7 .. 1
-		self.omega_x = 1.1 # rise_time / 1.8
+		self.zeta_x = 0.85 # 0.7 .. 1 - this is like the damping, so D
+		self.omega_x = 1.1 # rise_time / 1.8 - this is like the P term, rise time
 		self.zeta_y = 0.85 # 0.7 .. 1
 		self.omega_y = 1.1 # rise_time / 1.8
 		self.tau_z = 1
@@ -67,6 +69,14 @@ class PositionController(object):
 		# TIme tracking variables
 		self.startTime = rospy.get_time(); # start time
 		self.prevTime = self.startTime; # previous loop time
+
+	def satur(self, val, satval):
+		if val>satval:
+			return satval
+		elif val<(-satval):
+			return (-satval)
+		else:
+			return val
 
 	def des_pose(self, des_pos_msg): # subscriber to obtain desired pose
 		self.des_position = des_pos_msg
@@ -148,18 +158,23 @@ class PositionController(object):
 		#print("Modified: %.2f %.2f\n" % (pitch,-roll))
 
 		if (self.x_des==-9999999) and self.y_des==-9999999 and self.z_des==9999999:
-			self.quadrotor_command = self.pbvs_data
-			print("PBVS control")
+			self.quadrotor_command.linear.x = self.satur(self.pbvs_data.linear.x,self.stval)
+			self.quadrotor_command.linear.y = self.satur(self.pbvs_data.linear.y,self.stval)
+			self.quadrotor_command.linear.z = self.pbvs_data.linear.z
+			self.quadrotor_command.angular.x = 0
+			self.quadrotor_command.angular.y = 0
+			self.quadrotor_command.angular.z = self.pbvs_data.angular.z
+			#print("PBVS control")
 			#print("PBVS control: %.2f %.2f %.2f %.2f" % (self.quadrotor_command.linear.x,self.quadrotor_command.linear.y,self.quadrotor_command.linear.z,self.quadrotor_command.angular.z))
 		elif (self.x_des==-9999998) and self.y_des==-9999998 and self.z_des==9999998:
 			self.quadrotor_command = self.ibvs_data
-			print("IBVS control")
+			#print("IBVS control")
 		elif (self.x_des==-9999997) and self.y_des==-9999997 and self.z_des==9999997:
 			self.quadrotor_command.linear.x = pitch #command from optitrack
 			self.quadrotor_command.linear.y = -roll #command from optitrack
 			self.quadrotor_command.linear.z = self.ibvs_data.linear.z
 			self.quadrotor_command.angular.z = self.ibvs_data.angular.z
-			print("ZP_IBVS control")
+			#print("ZP_IBVS control")
 		else:
 			# Publish command velocity to quadrotor
 			self.quadrotor_command.linear.x = pitch
