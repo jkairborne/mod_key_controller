@@ -18,9 +18,9 @@
 
   <node name="desired_values" pkg="mod_key_controller" type="desired_positions.py" required="true"/>
 
-  <node name="drone_controller" pkg="mod_key_controller" type="drone_controller.py" output = "screen" required="true"/>
+  <node name="drone_controller" pkg="mod_key_controller" type="drone_controller.py" output = "screen"/>
 
-  <node name="key_controller" pkg="mod_key_controller" type="keyboard_controller.py" required="true" output = "screen" required="true"/>
+  <node name="key_controller" pkg="mod_key_controller" type="keyboard_controller.py" required="true" output = "screen"/>
 
   <node name="PBVS_Control" pkg="ardronecontrol" type="PBVS_ardrone" output = "screen"/>
   <node name="reconfigure_gui" pkg="rqt_reconfigure" type="rqt_reconfigure"/>
