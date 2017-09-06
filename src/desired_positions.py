@@ -106,7 +106,7 @@ class ROSDesiredPositionGenerator(object):
             # Desired velocities
             self.quadrotor_twist.twist.linear.x = 0 # desired x velocity obtained by differentiating desired x position
             self.quadrotor_twist.twist.linear.y = 0 # desired y velocity obtained by differentiating desired y position
-        elif index == 3:
+        elif (index == 3 or index==4):
             # Desired position
             self.quadrotor_pose.pose.position.x = -9999997 # desired x position
             self.quadrotor_pose.pose.position.y = -9999997 # deisred y position

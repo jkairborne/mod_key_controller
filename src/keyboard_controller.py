@@ -40,6 +40,7 @@ class KeyMapping(object):
 	PBVSControl      = QtCore.Qt.Key.Key_P # Use PBVS control
 	IBVSControl      = QtCore.Qt.Key.Key_I # IBVS control
 	ZP_IBVSControl   = QtCore.Qt.Key.Key_O # Z and Psi IBVS
+	ZP_IBVS_startRot = QtCore.Qt.Key.Key_L # Start rotation of Z/Psi IBVS
 
 # Our controller definition, note that we extend the DroneVideoDisplay class
 class KeyboardController(DroneVideoDisplay):
@@ -110,6 +111,11 @@ class KeyboardController(DroneVideoDisplay):
 					print("In the IBVS control")
 				elif key == KeyMapping.ZP_IBVSControl:
 					self.path_param = 3
+					self.pub_path.publish(self.path_param)
+					self.moving = True
+					print("In the ZP-IBVS control")
+				elif key == KeyMapping.ZP_IBVS_startRot:
+					self.path_param = 4
 					self.pub_path.publish(self.path_param)
 					self.moving = True
 					print("In the ZP-IBVS control")
