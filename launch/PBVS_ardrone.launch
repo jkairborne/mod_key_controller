@@ -22,7 +22,18 @@
 
   <node name="key_controller" pkg="mod_key_controller" type="keyboard_controller.py" required="true" output = "screen"/>
 
-  <node name="PBVS_Control" pkg="ardronecontrol" type="PBVS_ardrone" output = "screen"/>
+  <arg name="PBVS" default="true"/>
+<group if="$(arg PBVS)">
+  <node name="PBVS_Control" pkg="ardronecontrol" type="PBVS_ardrone" output = "screen" required="true"/>
+</group>
+
+
+  <arg name="IBVS" default="false"/>
+<group if="$(arg IBVS)">
+  <node name="IBVS_Control" pkg="opencv_ardrone" type="chessboard" output="screen" required="true"/>
+</group>
+
+
   <node name="reconfigure_gui" pkg="rqt_reconfigure" type="rqt_reconfigure"/>
 
  <!-- <node name="Plot_node"

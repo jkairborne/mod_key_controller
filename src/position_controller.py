@@ -25,7 +25,7 @@ class PositionController(object):
 	def __init__(self):
 		self.model_name = 'ardrone'
 
-		self.stval = 0.25
+		self.stval = 0.2
 
 		# Containers
 		self.opti_data = PoseStamped() # container to store incoming vicon data
@@ -33,6 +33,9 @@ class PositionController(object):
 		self.opti_pose = PoseStamped() # container to publish Vicon data as PoseStamped to visualize quadrotor pose in RViz
 		self.des_velocity = TwistStamped() # container to store incoming desired velocity
 		self.quadrotor_command = Twist() # container to publish command velocity to quadrotor
+
+		self.opti_at_pbvs_receive = Twist()
+		self.PBVSOpti = True
 
 		self.pbvs_data = Twist()
 		self.ibvs_data = Twist()
@@ -97,6 +100,8 @@ class PositionController(object):
 
 	def update_PBVS_data(self, actual_pbvs_data): # subscriber to obtain vicon data
 		self.pbvs_data = actual_pbvs_data
+		self.opti_at_pbvs_receive.linear.x = self.opti_data.pose.position.x
+		self.opti_at_pbvs_receive.linear.y = self.opti_data.pose.position.y
 		#rospy.loginfo("x : %f    y : %f     z : %f      angular: %f   ", roll, pitch, z_vel, yaw_rate)
 		
 	def update_IBVS_data(self, actual_ibvs_data):
@@ -158,14 +163,46 @@ class PositionController(object):
 		#print("Modified: %.2f %.2f\n" % (pitch,-roll))
 
 		if (self.x_des==-9999999) and self.y_des==-9999999 and self.z_des==9999999:
-			self.quadrotor_command.linear.x = self.satur(self.pbvs_data.linear.x,self.stval)
-			self.quadrotor_command.linear.y = self.satur(self.pbvs_data.linear.y,self.stval)
-			self.quadrotor_command.linear.z = self.pbvs_data.linear.z
-			self.quadrotor_command.angular.x = 0
-			self.quadrotor_command.angular.y = 0
-			self.quadrotor_command.angular.z = self.pbvs_data.angular.z
-			#print("PBVS control")
-			#print("PBVS control: %.2f %.2f %.2f %.2f" % (self.quadrotor_command.linear.x,self.quadrotor_command.linear.y,self.quadrotor_command.linear.z,self.quadrotor_command.angular.z))
+			if(self.PBVSOpti):
+			# In this case try to use the optitrack/PBVS controller.
+				self.x_des = self.opti_at_pbvs_receive.linear.x + self.pbvs_data.angular.x
+				self.y_des = self.opti_at_pbvs_receive.linear.y + self.pbvs_data.angular.y
+
+				# Desired velocity
+				self.x_vel_des = self.pbvs_data.linear.x
+				self.y_vel_des = self.pbvs_data.linear.y
+
+				# Controller
+				f = (z_accel + self.g)/(cos(self.theta)*cos(self.phi))
+				temp_x_accel_comm = (self.zeta_x*self.omega_x*(self.x_vel_des-self.x_vel)) + ((self.omega_x**2)*(self.x_des-self.x))
+				temp_y_accel_comm = (self.zeta_y*self.omega_y*(self.y_vel_des-self.y_vel)) + ((self.omega_y**2)*(self.y_des-self.y))
+		
+				# Here we correct for varying psi angles:
+				x_accel_comm = temp_x_accel_comm*cos(self.psi) + temp_y_accel_comm * sin(self.psi)
+				y_accel_comm = temp_x_accel_comm*sin(self.psi) - temp_y_accel_comm * cos(self.psi)
+
+				print("x_des, opti_rx_x, pbvs_x, x_vel_des: %.2f  %.2f  %.2f  %.2f" % (self.x_des, self.opti_at_pbvs_receive.linear.x,self.pbvs_data.angular.x,self.x_vel_des))
+				print("y_des, opti_rx_y, pbvs_y, y_vel_des: %.2f  %.2f  %.2f  %.2f" % (self.y_des, self.opti_at_pbvs_receive.linear.y,self.pbvs_data.angular.y,self.y_vel_des))
+
+				roll = asin(min(1,max((-y_accel_comm/f),-1))) # roll angle
+				pitch = asin(min(1,max((x_accel_comm/(f*cos(roll))),-1))) #pitch angle
+
+				self.quadrotor_command.linear.x = self.satur(pitch,self.stval)
+				self.quadrotor_command.linear.y = self.satur(-roll,self.stval)
+				self.quadrotor_command.linear.z = self.pbvs_data.linear.z
+				self.quadrotor_command.angular.x = 0
+				self.quadrotor_command.angular.y = 0
+				self.quadrotor_command.angular.z = self.pbvs_data.angular.z
+				print("x and y commanded: %.2f %.2f" % (self.quadrotor_command.linear.x,self.quadrotor_command.linear.y))
+				#print("PBVS control")
+				#print("PBVS control: %.2f %.2f %.2f %.2f" % (self.quadrotor_command.linear.x,self.quadrotor_command.linear.y,self.quadrotor_command.linear.z,self.quadrotor_command.angular.z))
+			else:
+				self.quadrotor_command.linear.x = self.satur(self.pbvs_data.linear.x,self.stval)
+				self.quadrotor_command.linear.y = self.satur(self.pbvs_data.linear.y,self.stval)
+				self.quadrotor_command.linear.z = self.pbvs_data.linear.z
+				self.quadrotor_command.angular.x = 0
+				self.quadrotor_command.angular.y = 0
+				self.quadrotor_command.angular.z = self.pbvs_data.angular.z
 		elif (self.x_des==-9999998) and self.y_des==-9999998 and self.z_des==9999998:
 			self.quadrotor_command = self.ibvs_data
 			#print("IBVS control")
