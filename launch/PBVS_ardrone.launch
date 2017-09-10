@@ -13,7 +13,7 @@
 <!-- Launch the OptiTrack node - the OptiTrack must already be running -->
   <include file="$(find vrpn_client_ros)/launch/sample.launch"/>
 
-<!-- Launch the ardronev1 node - our OptiTrack control -->
+<!-- Launch the ardronev1 node - our OptiTrack control-->
   <node name="position_controller" pkg="mod_key_controller" type="position_controller.py" output = "screen" required="true"/>
 
   <node name="desired_values" pkg="mod_key_controller" type="desired_positions.py" required="true"/>
