@@ -30,7 +30,6 @@ class PositionController(object):
 		# Containers
 		self.opti_data = PoseStamped() # container to store incoming vicon data
 		self.des_position = PoseStamped() # container to store incoming desired pose
-		self.opti_pose = PoseStamped() # container to publish Vicon data as PoseStamped to visualize quadrotor pose in RViz
 		self.des_velocity = TwistStamped() # container to store incoming desired velocity
 		self.quadrotor_command = Twist() # container to publish command velocity to quadrotor
 
@@ -43,12 +42,14 @@ class PositionController(object):
 		self.vis_deltas = Vector3()
 
 		self.targetInSight = False
+		self.deadReckoning = False
+		self.DR_posx =0
+		self.DR_posy =0 
 
 		# Pblishers and subscribers
 		self.sub_opti_data = rospy.Subscriber('/vrpn_client_node/{0}/pose'.format(self.model_name),PoseStamped, self.update_opti_data) # subscribe to incoming vicon data
 		self.pub_des_vel = rospy.Publisher('cmd_vel',Twist,queue_size=2) # publish desired velocity commands to quadrotor
 		self.visual_params = rospy.Publisher('visual_params',Vector3,queue_size=2) # publish desired velocity commands to quadrotor
-		self.pub_opti_data = rospy.Publisher('opti_data',PoseStamped,queue_size=2) # publish vicon data for use in RViz
 		self.sub_des_pose = rospy.Subscriber('des_pos',PoseStamped,self.des_pose) # subscribe to desired pose
 		self.sub_des_vel = rospy.Subscriber('des_vel',TwistStamped,self.des_velo) # subscribe to desired velocity
 
@@ -106,25 +107,39 @@ class PositionController(object):
 		self.opti_data.pose.orientation.w = actual_opti_data.pose.orientation.w
 		#rospy.loginfo("x : %f    y : %f     z : %f      angular: %f   ", roll, pitch, z_vel, yaw_rate)
 
-	def update_PBVS_data(self, actual_pbvs_data): # subscriber to obtain vicon data
+	def update_PBVS_data(self, actual_pbvs_data): # subscriber to obtain pbvs data
 		self.pbvs_data = actual_pbvs_data 
-		self.deadReckoning = False # Just reset this to false every time.
+		self.deadReckoning = False
+		if(self.pbvs_data.linear.x==-1000): #This if condition is likely useless
+			self.targetInSight = False
+			 #target has been out of FOV for long enough that we give up hope.
+		elif(self.pbvs_data.linear.x==-500): #get it back to normal 
+			self.targetInSight = False
+			self.deadReckoning = True
+			#print("self.deadReckoning = %r" % self.deadReckoning) # no need to do anything else - this simply won't update x_tgt and y_tgt below
+		elif(8<self.pbvs_data.linear.x <12):
+			self.pbvs_data.linear.x -= 10 #get it back to normal
+			self.targetInSight = True
+		elif(-2<self.pbvs_data.linear.x<2):
+			self.targetInSight = True
+			
 		if(self.PBVSOpti): #This means we are fusing the optitrack data with our visual data to create the vel cmd.
-			self.x_tgt = self.opti_data.pose.position.x - self.pbvs_data.angular.x # see September 9 2017 notes for why this is -ve
-			self.y_tgt = self.opti_data.pose.position.y + self.pbvs_data.angular.y
 			# Desired velocity
-			#self.x_vel_pbvs = 0
-			#self.y_vel_pbvs = 0
-			self.x_vel_pbvs = self.pbvs_data.linear.x
-			self.y_vel_pbvs = self.pbvs_data.linear.y
-			self.vis_deltas.x = self.x_tgt
+			self.x_vel_pbvs = 0
+			self.y_vel_pbvs = 0
+			#self.x_vel_pbvs = self.pbvs_data.linear.x
+			#self.y_vel_pbvs = self.pbvs_data.linear.y
+			if(self.deadReckoning == False):
+				self.x_tgt = self.opti_data.pose.position.x - self.pbvs_data.angular.x # see September 9 2017 notes for why this is -ve
+				self.y_tgt = self.opti_data.pose.position.y + self.pbvs_data.angular.y
+			else: #we are DR
+				pass#print("Dead-reckoning")
+
+			self.vis_deltas.x = self.x_tgt #for publishing to topic
 			self.vis_deltas.y = self.y_tgt
 			self.vis_deltas.z = 0
-			self.visual_params.publish(self.vis_deltas) # Publishes the optitrack coordinates we want to go to
-		if (self.pbvs_data.linear.x == 0 and self.pbvs_data.linear.y == 0 and self.pbvs_data.linear.z == 0 and self.pbvs_data.angular.x == 0 and self.pbvs_data.angular.y ==0 and self.pbvs_data.angular.z == -1000):
-			self.targetInSight = False
-		else:
-			self.targetInSight = True
+			self.visual_params.publish(self.vis_deltas) # Publishes the optitrack coordinates we want to go to - 
+
 		#rospy.loginfo("x : %f    y : %f     z : %f      angular: %f   ", roll, pitch, z_vel, yaw_rate)
 		
 	def update_IBVS_data(self, actual_ibvs_data):
@@ -135,12 +150,6 @@ class PositionController(object):
 		currentTime = rospy.get_time() # Get the current time in float seconds
 		time = currentTime - self.startTime # Current time from the start
 		dt = currentTime - self.prevTime # Time step
-
-		self.opti_pose.header.stamp = rospy.Time.now() # timestamp quadrotor pose
-		self.opti_pose.header.frame_id = "map" # RViz base frame for visualization
-
-		# store opti data as PoseStamped geometry msg for visualization in RViZ
-		self.opti_pose = self.opti_data
 
 		# Desired position and orientation
 		self.x_des = self.des_position.pose.position.x
@@ -189,15 +198,15 @@ class PositionController(object):
 
 		if (self.CtrlToUse == "PBVS"):
 			if(self.PBVSOpti):
-				if(self.targetInSight):
+				if(self.targetInSight or self.deadReckoning):
 				# In this case try to use the optitrack/PBVS controller - using the x_vel_pbvs and x_tgt/y equivalents in the Pbvs callback.
 					#print("opti_x, pos_diff_x: %.2f %.2f" % (self.opti_at_pbvs_receive.linear.x ,self.pbvs_data.angular.x))
 					#print("opti_y, pos_diff_y: %.2f %.2f" % (self.opti_at_pbvs_receive.linear.y ,self.pbvs_data.angular.y))
-					print("x, y guessed by PBVS:  %.2f  %.2f" % (self.x_tgt, self.y_tgt))
+					#print("x, y guessed by PBVS:  %.2f  %.2f" % (self.x_tgt, self.y_tgt))
 
 					# Controller
 					f = (z_accel + self.g)/(cos(self.theta)*cos(self.phi))
-					print("vel and pos components: %.2f %.2f" % (3*(self.zeta_x*self.omega_x*(self.x_vel_pbvs-self.x_vel)),((self.omega_x**2)*(self.x_tgt-self.x))))
+					#print("vel and pos components: %.2f %.2f" % (3*(self.zeta_x*self.omega_x*(self.x_vel_pbvs-self.x_vel)),((self.omega_x**2)*(self.x_tgt-self.x))))
 					temp_x_accel_comm = 3*(self.zeta_x*self.omega_x*(self.x_vel_pbvs-self.x_vel)) + (self.omega_x**2)*(self.x_tgt-self.x)
 					temp_y_accel_comm = 3*(self.zeta_y*self.omega_y*(self.y_vel_pbvs-self.y_vel)) + (self.omega_y**2)*(self.y_tgt-self.y)
 		
@@ -213,18 +222,20 @@ class PositionController(object):
 					self.quadrotor_command.linear.z = self.pbvs_data.linear.z
 					self.quadrotor_command.angular.x = 0
 					self.quadrotor_command.angular.y = 0
-					self.quadrotor_command.angular.z = self.pbvs_data.angular.z
-
+					self.quadrotor_command.angular.z = self.pbvs_data.angular.z #if DR, this should come in as 0.1
+					print("TinSight or deadReckoning: values: %.2f %.2f" % (self.quadrotor_command.linear.x,self.quadrotor_command.linear.y))
+ 
 					#print("PBVS control")
 					#print("PBVS control: %.2f %.2f %.2f %.2f" % (self.quadrotor_command.linear.x,self.quadrotor_command.linear.y,self.quadrotor_command.linear.z,self.quadrotor_command.angular.z))
 
-				if (self.targetInSight == False): # This means that the target is no longer in the FOV
+				if (self.targetInSight == False and self.deadReckoning == False): # This means that the target is no longer in the FOV
 					self.quadrotor_command.linear.x = 0
 					self.quadrotor_command.linear.y = 0
 					self.quadrotor_command.linear.z = 0
 					self.quadrotor_command.angular.x = 0.1 #enable autohover
 					self.quadrotor_command.angular.y = 0
 					self.quadrotor_command.angular.z = 0
+					print("TnotinSight, not DR")
 
 			else: #PBVS without Opti
 				self.quadrotor_command.linear.x = self.satur(self.pbvs_data.linear.x,self.stval)
@@ -243,17 +254,17 @@ class PositionController(object):
 			self.quadrotor_command.angular.z = self.ibvs_data.angular.z
 			#print("ZP_IBVS control")
 		else:
-			# Publish command velocity to quadrotor
+			# Just use the original optitrack control from above
 			self.quadrotor_command.linear.x = pitch
 			self.quadrotor_command.linear.y = -roll
 			self.quadrotor_command.angular.z = -yaw_rate
 			self.quadrotor_command.linear.z = -z_vel
+			print("optitrack control")
 		#print("pos_controller cmd_sent: %.2f %.2f %.2f %.2f" % (self.quadrotor_command.linear.x,self.quadrotor_command.linear.y,self.quadrotor_command.linear.z,self.quadrotor_command.angular.z))
+
+		# Publish command velocity to quadrotor
 		self.pub_des_vel.publish(self.quadrotor_command)
 		#rospy.loginfo("x : %f    y : %f     z : %f      angular: %f   ", roll, pitch, z_vel, yaw_rate)
-
-		# Publish vicon data as PoseStamped geometry msg
-		self.pub_opti_data.publish(self.opti_pose)
 
 		# Update previous values for next iteration
 		self.prevTime = currentTime;
@@ -261,6 +272,7 @@ class PositionController(object):
 		self.y_prev = self.y
 		self.z_prev = self.z
 		self.z_vel_prev = self.z_vel
+		print("ctrlToUse: %r PBVSOpti: %r deadReckoning: %r, targetInSight: %r " % (self.CtrlToUse,self.PBVSOpti,self.deadReckoning,self.targetInSight))
 
 if __name__ == '__main__':
 	rospy.init_node('position_controller') # initialize node
