@@ -3,8 +3,8 @@
 
 <launch>
 
-  <arg name="turtlebot" default="false"/>
-<group if="$(arg turtlebot)">
+  <arg name="roomba" default="false"/>
+<group if="$(arg roomba)">
   <node name="Roomba_node" pkg="visual_servoing_ardrone" type="roomba_vel" />
   <include file="$(find turtlebot_bringup)/launch/minimal.launch"/> 
 </group>

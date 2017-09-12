@@ -121,7 +121,7 @@ class PositionController(object):
 			self.vis_deltas.y = self.y_tgt
 			self.vis_deltas.z = 0
 			self.visual_params.publish(self.vis_deltas) # Publishes the optitrack coordinates we want to go to
-		if (self.pbvs_data.linear.x == 0 and self.pbvs_data.linear.y == 0 and self.pbvs_data.linear.z == 0 and self.pbvs_data.angular.x == 111 and self.pbvs_data.angular.y ==111 and self.pbvs_data.angular.z == 0):
+		if (self.pbvs_data.linear.x == 0 and self.pbvs_data.linear.y == 0 and self.pbvs_data.linear.z == 0 and self.pbvs_data.angular.x == 0 and self.pbvs_data.angular.y ==0 and self.pbvs_data.angular.z == -1000):
 			self.targetInSight = False
 		else:
 			self.targetInSight = True
@@ -168,10 +168,12 @@ class PositionController(object):
 		self.z_vel = (self.z - self.z_prev)/dt
 		z_accel = (self.z_vel - self.z_vel_prev)/dt
 
+		self.x_vel_des = 0
+		self.y_vel_des = 0
 		# Controller
 		f = (z_accel + self.g)/(cos(self.theta)*cos(self.phi))
-		temp_x_accel_comm = (3*self.zeta_x*self.omega_x*(self.x_vel_des-self.x_vel)) + 3*((self.omega_x**2)*(self.x_des-self.x))
-		temp_y_accel_comm = (3*self.zeta_y*self.omega_y*(self.y_vel_des-self.y_vel)) + 3*((self.omega_y**2)*(self.y_des-self.y))
+		temp_x_accel_comm = 3*(self.zeta_x*self.omega_x*(self.x_vel_des-self.x_vel)) + 3*((self.omega_x**2)*(self.x_des-self.x))
+		temp_y_accel_comm = 3*(self.zeta_y*self.omega_y*(self.y_vel_des-self.y_vel)) + 3*((self.omega_y**2)*(self.y_des-self.y))
 		
 		# Here we correct for varying psi angles:
 		x_accel_comm = temp_x_accel_comm*cos(self.psi) + temp_y_accel_comm * sin(self.psi)
@@ -187,31 +189,34 @@ class PositionController(object):
 
 		if (self.CtrlToUse == "PBVS"):
 			if(self.PBVSOpti):
-			# In this case try to use the optitrack/PBVS controller - using the x_vel_pbvs and x_tgt/y equivalents in the Pbvs callback.
-				#print("opti_x, pos_diff_x: %.2f %.2f" % (self.opti_at_pbvs_receive.linear.x ,self.pbvs_data.angular.x))
-				#print("opti_y, pos_diff_y: %.2f %.2f" % (self.opti_at_pbvs_receive.linear.y ,self.pbvs_data.angular.y))
-				print("x, y guessed by PBVS:  %.2f  %.2f" % (self.x_tgt, self.y_tgt))
+				if(self.targetInSight):
+				# In this case try to use the optitrack/PBVS controller - using the x_vel_pbvs and x_tgt/y equivalents in the Pbvs callback.
+					#print("opti_x, pos_diff_x: %.2f %.2f" % (self.opti_at_pbvs_receive.linear.x ,self.pbvs_data.angular.x))
+					#print("opti_y, pos_diff_y: %.2f %.2f" % (self.opti_at_pbvs_receive.linear.y ,self.pbvs_data.angular.y))
+					print("x, y guessed by PBVS:  %.2f  %.2f" % (self.x_tgt, self.y_tgt))
 
-				# Controller
-				f = (z_accel + self.g)/(cos(self.theta)*cos(self.phi))
-				temp_x_accel_comm = (self.zeta_x*self.omega_x*(self.x_vel_pbvs-self.x_vel)) + ((self.omega_x**2)*(self.x_tgt-self.x))
-				temp_y_accel_comm = (self.zeta_y*self.omega_y*(self.y_vel_pbvs-self.y_vel)) + ((self.omega_y**2)*(self.y_tgt-self.y))
+					# Controller
+					f = (z_accel + self.g)/(cos(self.theta)*cos(self.phi))
+					print("vel and pos components: %.2f %.2f" % (3*(self.zeta_x*self.omega_x*(self.x_vel_pbvs-self.x_vel)),((self.omega_x**2)*(self.x_tgt-self.x))))
+					temp_x_accel_comm = 3*(self.zeta_x*self.omega_x*(self.x_vel_pbvs-self.x_vel)) + (self.omega_x**2)*(self.x_tgt-self.x)
+					temp_y_accel_comm = 3*(self.zeta_y*self.omega_y*(self.y_vel_pbvs-self.y_vel)) + (self.omega_y**2)*(self.y_tgt-self.y)
 		
-				# Here we correct for varying psi angles:
-				x_accel_comm = temp_x_accel_comm*cos(self.psi) + temp_y_accel_comm * sin(self.psi)
-				y_accel_comm = temp_x_accel_comm*sin(self.psi) - temp_y_accel_comm * cos(self.psi)
+					# Here we correct for varying psi angles:
+					x_accel_comm = temp_x_accel_comm*cos(self.psi) + temp_y_accel_comm * sin(self.psi)
+					y_accel_comm = temp_x_accel_comm*sin(self.psi) - temp_y_accel_comm * cos(self.psi)
 
-				roll = asin(min(1,max((y_accel_comm/f),-1))) # roll angle
-				pitch = asin(min(1,max((x_accel_comm/(f*cos(roll))),-1))) #pitch angle
+					roll = asin(min(1,max((y_accel_comm/f),-1))) # roll angle
+					pitch = asin(min(1,max((x_accel_comm/(f*cos(roll))),-1))) #pitch angle
 
-				self.quadrotor_command.linear.x = self.satur(pitch,self.stval)
-				self.quadrotor_command.linear.y = self.satur(roll,self.stval)
-				self.quadrotor_command.linear.z = self.pbvs_data.linear.z
-				self.quadrotor_command.angular.x = 0
-				self.quadrotor_command.angular.y = 0
-				self.quadrotor_command.angular.z = self.pbvs_data.angular.z
-				#print("PBVS control")
-				#print("PBVS control: %.2f %.2f %.2f %.2f" % (self.quadrotor_command.linear.x,self.quadrotor_command.linear.y,self.quadrotor_command.linear.z,self.quadrotor_command.angular.z))
+					self.quadrotor_command.linear.x = self.satur(pitch,self.stval)
+					self.quadrotor_command.linear.y = self.satur(roll,self.stval)
+					self.quadrotor_command.linear.z = self.pbvs_data.linear.z
+					self.quadrotor_command.angular.x = 0
+					self.quadrotor_command.angular.y = 0
+					self.quadrotor_command.angular.z = self.pbvs_data.angular.z
+
+					#print("PBVS control")
+					#print("PBVS control: %.2f %.2f %.2f %.2f" % (self.quadrotor_command.linear.x,self.quadrotor_command.linear.y,self.quadrotor_command.linear.z,self.quadrotor_command.angular.z))
 
 				if (self.targetInSight == False): # This means that the target is no longer in the FOV
 					self.quadrotor_command.linear.x = 0
