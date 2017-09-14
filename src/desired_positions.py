@@ -76,8 +76,8 @@ class ROSDesiredPositionGenerator(object):
             #print('Hover')
 
             # Desired position
-            self.quadrotor_pose.pose.position.x = 0 # desired x position
-            self.quadrotor_pose.pose.position.y = 0 # deisred y position
+            self.quadrotor_pose.pose.position.x = 0.4 # desired x position
+            self.quadrotor_pose.pose.position.y = 0.2 # deisred y position
             self.quadrotor_pose.pose.position.z = -1 # desired z position
 
             # Desired velocities

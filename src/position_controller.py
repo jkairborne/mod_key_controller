@@ -133,8 +133,8 @@ class PositionController(object):
 			#self.x_vel_pbvs = self.pbvs_data.linear.x
 			#self.y_vel_pbvs = self.pbvs_data.linear.y
 			if(self.deadReckoning == False):
-				self.x_tgt = self.opti_data.pose.position.x + (-self.pbvs_data.angular.x*cos(self.psi))#-self.pbvs_data.angular.y*sin(self.psi)) # see September 9 2017 notes for why this is -ve
-				self.y_tgt = self.opti_data.pose.position.y + (self.pbvs_data.angular.y*cos(self.psi))#-self.pbvs_data.angular.x*sin(self.psi))
+				self.x_tgt = self.opti_data.pose.position.x + (-self.pbvs_data.angular.x*cos(self.psi)-self.pbvs_data.angular.y*sin(self.psi)) # see September 9 2017 notes for why this is -ve
+				self.y_tgt = self.opti_data.pose.position.y + (self.pbvs_data.angular.y*cos(self.psi)-self.pbvs_data.angular.x*sin(self.psi))
 				#print("opti x: %.2f opti y: %.2f opti yaw: %.2f" % (self.opti_data.pose.position.x,self.opti_data.pose.position.y,self.psi) )
 			else: #we are DR
 				pass#print("Dead-reckoning")
