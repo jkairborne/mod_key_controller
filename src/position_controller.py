@@ -36,8 +36,8 @@ class PositionController(object):
 		self.opti_at_pbvs_receive = Twist()
 		self.PBVSOpti = True
 		self.CtrlToUse = "OPTI"
-		self.useZScale = True
-		self.scaleZHeight = -0.5
+		self.useZScale = False
+		self.scaleZHeight = -0.5 #remember Z is negative upwards
 		self.ZScale = 0.2
 
 		self.pbvs_data = Twist()
@@ -146,6 +146,7 @@ class PositionController(object):
 			self.vis_deltas.angular.y = self.pbvs_data.angular.x
 			self.vis_deltas.angular.z = self.psi
 			self.visual_params.publish(self.vis_deltas) # Publishes the optitrack coordinates we want to go to - 
+			print("just published visual_deltas")
 
 		#rospy.loginfo("x : %f    y : %f     z : %f      angular: %f   ", roll, pitch, z_vel, yaw_rate)
 		
@@ -241,6 +242,7 @@ class PositionController(object):
 					self.quadrotor_command.angular.y = 0
 					self.quadrotor_command.angular.z = 0
 					#print("TnotinSight, not DR")
+					
 
 			else: #PBVS without Opti
 				self.quadrotor_command.linear.x = self.satur(self.pbvs_data.linear.x,self.stval)
@@ -249,6 +251,7 @@ class PositionController(object):
 				self.quadrotor_command.angular.x = 0
 				self.quadrotor_command.angular.y = 0
 				self.quadrotor_command.angular.z = self.pbvs_data.angular.z
+				print("in the else")
 		elif self.CtrlToUse=="IBVS":
 			self.quadrotor_command = self.ibvs_data
 			#print("IBVS control")
@@ -264,10 +267,8 @@ class PositionController(object):
 			self.quadrotor_command.linear.y = -roll
 			self.quadrotor_command.angular.z = -yaw_rate
 			self.quadrotor_command.linear.z = -z_vel
-			#print("optitrack control")
+			print("optitrack control")
 		#print("pos_controller cmd_sent: %.2f %.2f %.2f %.2f" % (self.quadrotor_command.linear.x,self.quadrotor_command.linear.y,self.quadrotor_command.linear.z,self.quadrotor_command.angular.z))
-
-#		self.quadrotor_command.linear.x = 1.0
 		
 		#Scale command to height of quad if below 0.5m
 		if self.useZScale and (self.scaleZHeight<self.z<0.1): #ensure we want to use ZScale. Also keep in mind NED frame, so z is negative at altitude. The 0.1 is just in case of weird calibration
