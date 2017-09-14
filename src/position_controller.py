@@ -135,8 +135,8 @@ class PositionController(object):
 		self.vis_deltas.linear.x = self.x_tgt #for publishing to topic
 		self.vis_deltas.linear.y = self.y_tgt
 		self.vis_deltas.linear.z = self.opti_data.pose.position.x
-		self.vis_deltas.angular.x = self.opti_data.pose.position.y
-		self.vis_deltas.angular.y = self.pbvs_data.angular.x
+		self.vis_deltas.angular.x = self.pbvs_data.angular.x
+		self.vis_deltas.angular.y = self.pbvs_data.angular.y
 		self.vis_deltas.angular.z = self.psi
 		self.visual_params.publish(self.vis_deltas) # Publishes the optitrack coordinates we want to go to - 
 		#print("just published visual_deltas")
