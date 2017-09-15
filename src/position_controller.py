@@ -159,6 +159,11 @@ class PositionController(object):
 		time = currentTime - self.startTime # Current time from the start
 		dt = currentTime - self.prevTime # Time step
 
+		if(self.CtrlToUse == "ZP-IBVS"):
+			self.des_position.pose.position.x = 0.536
+			self.des_position.pose.position.y = -0.09
+			self.des_position.pose.position.z== -1
+		
 		# Desired position and orientation
 		self.x_des = self.des_position.pose.position.x
 		self.y_des = self.des_position.pose.position.y
